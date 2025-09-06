@@ -1,5 +1,7 @@
-FROM node:20-alpine
-WORKDIR /usr/src/app
+FROM node:20
+WORKDIR /app
 COPY package*.json ./
 RUN npm ci
+COPY . .
 EXPOSE 2999
+CMD ["npm","run","start:dev"]
