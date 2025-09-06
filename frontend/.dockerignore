@@ -1,0 +1,38 @@
+# --- Node ---
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# --- Git ---
+.git
+.gitignore
+
+# --- Docker ---
+docker-compose.yml
+Dockerfile*
+*.dockerignore
+
+# --- Logs ---
+logs
+*.log
+
+# --- Build output ---
+dist
+.out
+.nuxt
+coverage
+.nyc_output
+
+# --- Env ---
+*.env
+.env
+.env.*
+!.env.example
+
+# --- IDE / OS ---
+.idea
+.vscode
+*.swp
+.DS_Store
+Thumbs.db

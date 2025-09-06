@@ -32,8 +32,6 @@ db_data/
 redis_data/
 
 # --- Husky ---
-# Храним только сами хуки (.husky/*.sh, commit-msg, pre-commit и т.п.)
-# но исключаем внутреннюю папку _/
 .husky/_/
 
 # --- IDE / OS ---
