@@ -3,9 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "nuxt dev --port 3000 --host 0.0.0.0",
+    "dev": "nuxt dev --port 3000 --host localhost",
     "build": "nuxt build",
-    "start": "nuxt start --port 3000 --host 0.0.0.0",
+    "start": "nuxt start --port 3000 --host localhost",
     "lint": "eslint --ext .js,.ts,.vue",
     "lint:fix": "eslint --ext .js,.ts,.vue --fix",
     "format": "prettier --check .",

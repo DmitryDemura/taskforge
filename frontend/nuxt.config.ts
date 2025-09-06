@@ -6,8 +6,8 @@ export default defineNuxtConfig({
   },
 
   devServer: {
+    host: 'localhost',
     port: 3000,
-    host: '0.0.0.0',
   },
 
   modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/fonts', '@nuxt/icon', '@pinia/nuxt'],
