@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskforge-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: taskforge-redis
+    command: ['redis-server', '--save', '60', '1', '--loglevel', 'warning']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  api:
+    container_name: taskforge-api
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./env/.env.dev
+    environment:
+      PORT: '2999'
+    ports:
+      - '2999:2999'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../backend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    restart: unless-stopped
+
+  frontend:
+    container_name: taskforge-frontend
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      NUXT_PUBLIC_API_BASE: http://api:2999
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  redis_data:

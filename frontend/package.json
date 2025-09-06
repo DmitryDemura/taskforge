@@ -1,0 +1,30 @@
+{
+  "name": "nuxt-app",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev --port 3000 --host 0.0.0.0",
+    "build": "nuxt build",
+    "start": "nuxt start --port 3000 --host 0.0.0.0",
+    "lint": "eslint . --ext .js,.ts,.vue",
+    "lint:fix": "eslint . --ext .js,.ts,.vue --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write ."
+  },
+  "dependencies": {
+    "@nuxt/eslint": "^1.9.0",
+    "@nuxt/fonts": "^0.11.4",
+    "@nuxt/icon": "^2.0.0",
+    "@nuxt/image": "^1.11.0",
+    "@pinia/nuxt": "^0.11.2",
+    "eslint": "^9.35.0",
+    "nuxt": "^4.1.0",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.3.9",
+    "vue": "^3.5.20",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1"
+  }
+}
