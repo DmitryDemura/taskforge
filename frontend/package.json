@@ -6,8 +6,8 @@
     "dev": "nuxt dev --port 3000 --host 0.0.0.0",
     "build": "nuxt build",
     "start": "nuxt start --port 3000 --host 0.0.0.0",
-    "lint": "eslint . --ext .js,.ts,.vue",
-    "lint:fix": "eslint . --ext .js,.ts,.vue --fix",
+    "lint": "eslint --ext .js,.ts,.vue",
+    "lint:fix": "eslint --ext .js,.ts,.vue --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write ."
   },
@@ -25,6 +25,7 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@types/node": "^24.3.1"
+    "@types/node": "^24.3.1",
+    "prettier": "^3.6.2"
   }
 }
