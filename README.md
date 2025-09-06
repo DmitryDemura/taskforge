@@ -49,11 +49,13 @@ If you need to reset everything:
 # Stop and remove containers, networks, and volumes
 docker compose down -v --remove-orphans
 
-# Remove node_modules
+# Remove node_modules (root + backend + frontend)
+Remove-Item -Recurse -Force node_modules
 Remove-Item -Recurse -Force backend\node_modules
 Remove-Item -Recurse -Force frontend\node_modules
 
 # Remove lockfiles
+Remove-Item package-lock.json
 Remove-Item backend\package-lock.json
 Remove-Item frontend\package-lock.json
 ```
@@ -61,6 +63,7 @@ Remove-Item frontend\package-lock.json
 Then reinstall dependencies:
 
 ```bash
+npm install
 npm install --prefix backend
 npm install --prefix frontend
 ```
