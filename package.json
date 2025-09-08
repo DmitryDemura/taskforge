@@ -4,8 +4,25 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "up": "docker compose up -d",
+    "down": "docker compose down -v --remove-orphans",
+    "rebuild": "node scripts/rebuild.js",
+    "clean": "node scripts/clean.js",
+    "logs": "docker compose logs -f",
+    "logs:api": "docker compose logs -f api",
+    "prisma:generate": "docker compose exec api npx prisma generate",
+    "prisma:migrate": "docker compose exec api npx prisma migrate deploy",
+    "prisma:studio": "docker compose exec api npx prisma studio",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "docker compose exec api npm run lint",
+    "lint:frontend": "docker compose exec frontend npm run lint",
+    "lint:fix": "npm run lint:fix:backend && npm run lint:fix:frontend",
+    "lint:fix:backend": "docker compose exec api npm run lint:fix",
+    "lint:fix:frontend": "docker compose exec frontend npm run lint:fix",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "docker compose exec api npm run format",
+    "format:frontend": "docker compose exec frontend npm run format"
   },
   "repository": {
     "type": "git",
