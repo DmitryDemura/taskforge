@@ -1,40 +1,57 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import globals from 'globals';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**', 'generated/**', '*.js', '*.cjs'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'prisma/generated/**',
+      'src/**/__generated__/**',
+    ],
   },
 
   js.configs.recommended,
-
   ...tseslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
+
   {
-    files: ['src/**/*.ts'],
+    files: ['**/*.ts'],
     languageOptions: {
+      parser: tseslint.parser,
       parserOptions: {
-        project: [path.join(__dirname, 'tsconfig.json')],
-        tsconfigRootDir: __dirname,
-        sourceType: 'module',
+        project: ['./tsconfig.json', './tsconfig.build.json'],
+        tsconfigRootDir,
       },
+      globals: globals.node,
+    },
+    rules: {
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
     },
   },
-
-  ...tseslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ['**/*.spec.ts', 'test/**/*.ts'],
+    files: ['**/*.{ts,cts,mts,tsx}'],
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+    },
     languageOptions: {
+      parser: tseslint.parser,
       parserOptions: {
-        project: [path.join(__dirname, 'tsconfig.spec.json')],
-        tsconfigRootDir: __dirname,
+        project: ['./tsconfig.json', './tsconfig.build.json'],
+        tsconfigRootDir,
         sourceType: 'module',
       },
+      globals: globals.node,
+    },
+    rules: {
+      //
     },
   },
 ];
