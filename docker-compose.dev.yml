@@ -1,0 +1,39 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://taskforge:taskforge@db:5432/taskforge
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - '2999:2999'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - HOST=0.0.0.0
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3001
+      - NUXT_API_BASE=http://api:2999
+      - NUXT_PUBLIC_API_BASE=http://localhost:2999
+    volumes:
+      - ./frontend:/app
+    ports:
+      - '3001:3001'
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - api
