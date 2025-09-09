@@ -1,23 +1,65 @@
-const fs = require('fs');
-const path = require('path');
-
-const rel = (base, files) => files.map((f) => path.relative(base, f));
-const nuxtEslintReady = fs.existsSync(path.join(__dirname, 'frontend', '.nuxt', 'eslint.config.mjs'));
+// const path = require('path'); // Unused for now
 
 module.exports = {
-  ignores: ['**/package-lock.json'],
+  // Ignore files that shouldn't be linted/formatted
+  ignores: [
+    '**/package-lock.json',
+    '**/yarn.lock',
+    '**/pnpm-lock.yaml',
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/.nuxt/**',
+    '**/.output/**',
+    '**/coverage/**',
+  ],
+
+  // Frontend files (JS, TS, Vue)
 
   'frontend/**/*.{js,ts,vue}': (files) => {
-    if (!nuxtEslintReady) return [];
-    const fe = rel('frontend', files);
-    return [`npm --prefix frontend run lint:fix -- ${fe.join(' ')}`];
+    const fileList = files.join(' ');
+
+    return [
+      `prettier --write --ignore-unknown ${fileList}`,
+      `eslint --config eslint.config.mjs --fix ${fileList}`,
+    ];
   },
 
-  'backend/**/*.ts': (files) => {
-    const be = rel('backend', files);
-    return [`npm --prefix backend run lint:fix -- ${be.join(' ')}`];
+  // Backend files (TypeScript)
+
+  'backend/**/*.{ts,cts,mts}': (files) => {
+    const fileList = files.join(' ');
+
+    return [
+      `prettier --write --ignore-unknown ${fileList}`,
+      `eslint --config eslint.config.mjs --fix ${fileList}`,
+    ];
   },
 
-  '**/*.{json,md,css,scss,yml,yaml}': (files) =>
-    `prettier --write --ignore-unknown ${files.join(' ')}`
+  // Script files
+
+  'scripts/**/*.{js,mjs,cjs}': (files) => {
+    const fileList = files.join(' ');
+
+    return [
+      `prettier --write --ignore-unknown ${fileList}`,
+      `eslint --config eslint.config.mjs --fix ${fileList}`,
+    ];
+  },
+
+  // Configuration files
+
+  '*.{js,mjs,cjs,ts,json}': (files) => {
+    const fileList = files.join(' ');
+
+    return [`prettier --write --ignore-unknown ${fileList}`];
+  },
+
+  // Documentation and data files
+
+  '**/*.{json,md,css,scss,yml,yaml}': (files) => {
+    const fileList = files.join(' ');
+
+    return [`prettier --write --ignore-unknown ${fileList}`];
+  },
 };
