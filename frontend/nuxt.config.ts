@@ -1,6 +1,11 @@
 export default defineNuxtConfig({
+  compatibilityDate: '2025-09-09',
+
   // SPA mode - disable SSR completely
   ssr: false,
+
+  // Use app directory structure
+  srcDir: 'app/',
 
   devtools: {
     enabled: false,
@@ -13,12 +18,6 @@ export default defineNuxtConfig({
 
   // Minimal modules to avoid oxc-parser issues
   modules: ['@pinia/nuxt'],
-
-  css: ['primeicons/primeicons.css'],
-
-  build: {
-    transpile: ['primevue'],
-  },
 
   runtimeConfig: {
     apiBase: process.env.NUXT_API_BASE || 'http://api:2999/api',
