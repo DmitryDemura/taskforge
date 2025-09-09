@@ -35,6 +35,7 @@
     "lint:fix:frontend": "node eslint.config.mjs fixFrontend",
     "lint:fix:scripts": "node eslint.config.mjs fixScripts",
     "format": "node eslint.config.mjs formatAll",
+    "format:fix": "node eslint.config.mjs formatAll",
     "format:check": "prettier --check . --config .prettierrc.json --ignore-path .prettierignore",
     "format:backend": "node eslint.config.mjs formatBackend",
     "format:frontend": "node eslint.config.mjs formatFrontend",

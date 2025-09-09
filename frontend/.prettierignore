@@ -1,0 +1,40 @@
+# Build output
+dist/
+build/
+.output/
+.nuxt/
+
+# Dependencies
+node_modules/
+
+# Generated files
+**/*.d.ts
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

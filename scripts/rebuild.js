@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-const { execSync } = require('child_process');
+const { execSync, exec: execAsync } = require('child_process');
 const fs = require('fs');
 
 const colors = {
@@ -11,14 +10,19 @@ const colors = {
   cyan: '\x1b[36m',
 };
 
+const isWindows = process.platform === 'win32';
+const isMac = process.platform === 'darwin';
+const isLinux = process.platform === 'linux';
+
 function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
 }
 
-function step(title, action) {
+async function step(title, action) {
   log(`\n=== ${title} ===`, colors.yellow);
+
   try {
-    action();
+    await action();
     log(`✅ ${title} completed`, colors.green);
   } catch (error) {
     log(`❌ ${title} failed: ${error.message}`, colors.red);
@@ -26,107 +30,441 @@ function step(title, action) {
   }
 }
 
+const args = process.argv.slice(2);
+
+const skipCleanup = args.includes('--skip-cleanup');
+const skipDeps = args.includes('--skip-deps');
+const skipBuild = args.includes('--skip-build');
+const onlyFrontend = args.includes('--frontend-only');
+const onlyBackend = args.includes('--backend-only');
+const dryRun = args.includes('--dry-run');
+const parallelBuild = args.includes('--parallel-build');
+const doPrune = args.includes('--prune'); // ВАЖНО: глобальные prune теперь запускаются только по этому флагу
+
+if (onlyFrontend && onlyBackend) {
+  log('❌ Use either --frontend-only or --backend-only, not both.', colors.red);
+  process.exit(1);
+}
+
 function exec(command, options = {}) {
+  if (dryRun) {
+    log(`[dry-run] Would run: ${command}`, colors.cyan);
+
+    return '';
+  }
+
   log(`Running: ${command}`, colors.cyan);
+
   return execSync(command, { stdio: 'inherit', ...options });
 }
 
 function removeIfExists(filePath) {
-  if (fs.existsSync(filePath)) {
-    if (fs.lstatSync(filePath).isDirectory()) {
-      fs.rmSync(filePath, { recursive: true, force: true });
-      log(`Removed directory: ${filePath}`);
-    } else {
-      fs.unlinkSync(filePath);
-      log(`Removed file: ${filePath}`);
-    }
+  const exists = fs.existsSync(filePath);
+
+  if (!exists) {
+    return;
+  }
+
+  const isDir = fs.lstatSync(filePath).isDirectory();
+
+  if (dryRun) {
+    log(`[dry-run] Would remove ${isDir ? 'directory' : 'file'}: ${filePath}`);
+
+    return;
+  }
+
+  if (isDir) {
+    fs.rmSync(filePath, { recursive: true, force: true });
+    log(`Removed directory: ${filePath}`);
+  } else {
+    fs.unlinkSync(filePath);
+    log(`Removed file: ${filePath}`);
   }
 }
 
-const startTime = Date.now();
+function formatTime(milliseconds) {
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
 
-log('🚀 TaskForge Full Rebuild Started', colors.bright);
-log(`📁 Project directory: ${process.cwd()}`, colors.cyan);
+  return minutes > 0 ? `${minutes}m ${remainingSeconds}s` : `${remainingSeconds}s`;
+}
 
-step('1) Stop and remove containers', () => {
-  exec('docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v --remove-orphans');
-});
+function waitForService(url, serviceName, maxRetries = 30, retryInterval = 2000) {
+  if (dryRun) {
+    log(
+      `[dry-run] Would wait for ${serviceName} at ${url} (maxRetries=${maxRetries}, interval=${retryInterval}ms)`,
+      colors.cyan,
+    );
 
-step('2) Clean node_modules directories', () => {
-  const nodeModulesPaths = [
-    'node_modules',
-    'backend/node_modules',
-    'frontend/node_modules'
-  ];
-  
-  nodeModulesPaths.forEach(removeIfExists);
-});
-
-step('3) Remove package-lock files', () => {
-  const lockFiles = [
-    'package-lock.json',
-    'backend/package-lock.json',
-    'frontend/package-lock.json'
-  ];
-  
-  lockFiles.forEach(removeIfExists);
-});
-
-step('4) Remove Docker images and build cache', () => {
-  try {
-    // Try to remove images, ignore if they don't exist
-    try {
-      exec('docker image rm taskforge-api taskforge-frontend', { stdio: 'pipe' });
-    } catch {
-      log('Some images not found, continuing...', colors.yellow);
-    }
-    exec('docker builder prune -f', { stdio: 'pipe' });
-  } catch (error) {
-    log('Some cleanup commands failed, but continuing...', colors.yellow);
+    return Promise.resolve();
   }
-});
 
-step('5) Build Docker images (no cache)', () => {
-  exec('docker compose -f docker-compose.yml -f docker-compose.dev.yml build --no-cache');
-});
+  return new Promise((resolve, reject) => {
+    let retries = 0;
 
-step('6) Start services', () => {
-  exec('docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d');
-});
+    const checkService = () => {
+      try {
+        let cmd;
 
-step('7) Install host dependencies', () => {
-  exec('npm install');
-  exec('npm install --prefix backend');
-  exec('npm install --prefix frontend');
-});
+        if (isWindows) {
+          cmd = `powershell -Command "try { $r = Invoke-WebRequest -Uri '${url}' -UseBasicParsing -TimeoutSec 5; $r.StatusCode } catch { 0 }"`;
+        } else {
+          cmd = `sh -c "curl -s -o /dev/null -w '%{http_code}' --max-time 5 '${url}' || echo 0"`;
+        }
 
-step('8) Wait for services to be ready', () => {
-  log('Waiting for API to be ready...');
-  let retries = 30;
-  while (retries > 0) {
-    try {
-      exec('docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api npx prisma generate', { stdio: 'pipe' });
-      break;
-    } catch (error) {
-      retries--;
-      if (retries === 0) throw error;
-      log(`Retrying in 2 seconds... (${retries} attempts left)`);
-      // Cross-platform sleep
-      const start = Date.now();
-      while (Date.now() - start < 2000) {
-        // Wait 2 seconds
+        const result = execSync(cmd, { stdio: 'pipe', encoding: 'utf8' });
+        const code = parseInt(String(result).trim(), 10);
+
+        if (code >= 200 && code < 400) {
+          log(`✅ ${serviceName} is ready at ${url}`, colors.green);
+          resolve();
+
+          return;
+        }
+      } catch {
+        // ignore
       }
-    }
+
+      retries++;
+
+      if (retries >= maxRetries) {
+        reject(new Error(`${serviceName} not ready after ${maxRetries} attempts`));
+
+        return;
+      }
+
+      setTimeout(checkService, retryInterval);
+    };
+
+    checkService();
+  });
+}
+
+function openBrowser(url) {
+  if (dryRun) {
+    log(`[dry-run] Would open browser at: ${url}`, colors.cyan);
+
+    return;
   }
-});
 
-step('9) Run Prisma migrations', () => {
-  exec('docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api npx prisma migrate deploy');
-});
+  let cmd;
 
-const elapsed = Math.round((Date.now() - startTime) / 1000);
-log(`\n🎉 TaskForge rebuild completed in ${elapsed}s!`, colors.green);
-log('\n📋 Next steps:', colors.bright);
-log('  • Check logs: npm run logs');
-log('  • API health: curl http://localhost:2999/health');
-log('  • Frontend: http://localhost:3001');
+  if (isWindows) {
+    cmd = `start "" "${url}"`;
+  } else if (isMac) {
+    cmd = `open "${url}"`;
+  } else if (isLinux) {
+    cmd = `xdg-open "${url}"`;
+  } else {
+    return;
+  }
+
+  execAsync(cmd, (err) => {
+    if (!err) {
+      log('🚀 Frontend opened in browser!', colors.green);
+    }
+  });
+}
+
+async function main() {
+  const startTime = Date.now();
+
+  log('🚀 TaskForge Rebuild Started', colors.bright);
+
+  if (dryRun) {
+    log('🧪 DRY-RUN MODE: no files, images, containers or deps will be changed.', colors.yellow);
+  }
+
+  if (parallelBuild) {
+    log('🧵 Parallel build enabled (docker compose build --parallel)', colors.yellow);
+  }
+
+  if (doPrune) {
+    log('🧹 Global prunes enabled by --prune (dangling images & build cache).', colors.yellow);
+  } else {
+    log('🛡️ Global prunes disabled (safe mode). Use --prune to enable.', colors.yellow);
+  }
+
+  // 1) Stop and remove containers
+  if (!skipCleanup) {
+    await step('1) Stop and remove containers', () => {
+      const cmd =
+        'docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v --remove-orphans';
+      exec(cmd);
+    });
+  } else {
+    log('⚡ Skipping container cleanup', colors.yellow);
+  }
+
+  // 2) Clean node_modules (respect ONLY vs. FULL)
+  if (!skipCleanup) {
+    await step('2) Clean node_modules', () => {
+      if (onlyFrontend) {
+        removeIfExists('frontend/node_modules');
+      } else if (onlyBackend) {
+        removeIfExists('backend/node_modules');
+      } else {
+        removeIfExists('backend/node_modules');
+        removeIfExists('frontend/node_modules');
+        removeIfExists('node_modules'); // root — только в full
+      }
+    });
+  }
+
+  // 3) Remove package-locks (respect ONLY vs. FULL)
+  if (!skipCleanup) {
+    await step('3) Remove package-locks', () => {
+      if (onlyFrontend) {
+        removeIfExists('frontend/package-lock.json');
+      } else if (onlyBackend) {
+        removeIfExists('backend/package-lock.json');
+      } else {
+        removeIfExists('backend/package-lock.json');
+        removeIfExists('frontend/package-lock.json');
+        removeIfExists('package-lock.json'); // root — только в full
+      }
+    });
+  }
+
+  // 4) Remove Docker images (SCOPED! no global prune unless --prune AND full)
+  if (!skipCleanup) {
+    await step('4) Remove Docker images', () => {
+      const images = [];
+
+      if (!onlyFrontend) {
+        images.push('taskforge-api');
+      }
+
+      if (!onlyBackend) {
+        images.push('taskforge-frontend');
+      }
+
+      if (images.length) {
+        try {
+          const cmd = `docker image rm ${images.join(' ')}`;
+          exec(cmd, { stdio: 'pipe' });
+        } catch {
+          // ignore
+        }
+      } else {
+        log('No project images selected for removal in this mode', colors.yellow);
+      }
+
+      // Глобальные prune только в FULL-режиме и только по флагу --prune
+      if (!onlyFrontend && !onlyBackend && doPrune) {
+        const pruneImagesCmd = 'docker image prune -f';
+        exec(pruneImagesCmd, { stdio: 'pipe' });
+
+        const pruneBuilderCmd = 'docker builder prune -f';
+        exec(pruneBuilderCmd, { stdio: 'pipe' });
+      } else {
+        log('Skipping global prune (either ONLY mode or --prune not set)', colors.yellow);
+      }
+    });
+  }
+
+  // 5) Install dependencies (scoped)
+  if (!skipDeps) {
+    await step('5) Install dependencies', () => {
+      // Always install root dependencies first
+      const npmInstallRoot = 'npm install';
+      exec(npmInstallRoot);
+
+      if (onlyBackend) {
+        const cmd = 'npm install --prefix backend';
+        exec(cmd);
+      } else if (onlyFrontend) {
+        const cmd = 'npm install --prefix frontend';
+        exec(cmd);
+      } else {
+        const cmdBe = 'npm install --prefix backend';
+        const cmdFe = 'npm install --prefix frontend';
+        exec(cmdBe);
+        exec(cmdFe);
+      }
+    });
+  } else {
+    log('⚡ Skipping dependency installation', colors.yellow);
+  }
+
+  // 6) Build Docker images (supports --parallel-build)
+  if (!skipBuild) {
+    await step('6) Build Docker images', () => {
+      const composeFiles = '-f docker-compose.yml -f docker-compose.dev.yml';
+      const parallel = parallelBuild ? '--parallel ' : '';
+
+      if (onlyBackend) {
+        const cmd = `docker compose ${composeFiles} build ${parallel} --no-cache api`;
+        exec(cmd);
+      } else if (onlyFrontend) {
+        const cmd = `docker compose ${composeFiles} build ${parallel} --no-cache frontend`;
+        exec(cmd);
+      } else {
+        const cmd = `docker compose ${composeFiles} build ${parallel} --no-cache api frontend`;
+        exec(cmd);
+      }
+    });
+  } else {
+    log('⚡ Skipping Docker image build', colors.yellow);
+  }
+
+  // 7) Start services
+  await step('7) Start services', () => {
+    const composeFiles = '-f docker-compose.yml -f docker-compose.dev.yml';
+
+    if (onlyBackend) {
+      const cmd = `docker compose ${composeFiles} up -d db redis api`;
+      exec(cmd);
+    } else if (onlyFrontend) {
+      const cmd = `docker compose ${composeFiles} up -d frontend`;
+      exec(cmd);
+    } else {
+      const cmd = `docker compose ${composeFiles} up -d db redis api frontend`;
+      exec(cmd);
+    }
+  });
+
+  // 8–9) Backend-only steps (wait + prisma)
+  if (!onlyFrontend) {
+    await step('8) Wait for DB/Redis/API', async () => {
+      log('Waiting for database to be ready...');
+
+      let dbRetries = 30;
+
+      while (dbRetries > 0) {
+        try {
+          const cmd =
+            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec db pg_isready -U taskforge -d taskforge';
+          exec(cmd, { stdio: 'pipe' });
+          log('Database is ready!');
+          break;
+        } catch {
+          dbRetries--;
+
+          if (dbRetries === 0) {
+            throw new Error('Database failed to become ready');
+          }
+
+          log(`Waiting for database... (${dbRetries} attempts left)`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
+      log('Waiting for Redis to be ready...');
+
+      let redisRetries = 30;
+
+      while (redisRetries > 0) {
+        try {
+          const cmd =
+            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec redis redis-cli ping';
+          exec(cmd, { stdio: 'pipe' });
+          log('Redis is ready!');
+          break;
+        } catch {
+          redisRetries--;
+
+          if (redisRetries === 0) {
+            throw new Error('Redis failed to become ready');
+          }
+
+          log(`Waiting for Redis... (${redisRetries} attempts left)`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
+      log('Waiting for API container to be ready...');
+
+      let apiRetries = 60;
+
+      while (apiRetries > 0) {
+        try {
+          let cmd =
+            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api echo "Container is ready"';
+          exec(cmd, { stdio: 'pipe' });
+
+          cmd =
+            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api npx prisma generate';
+          exec(cmd, { stdio: 'pipe' });
+
+          log('API container is ready and Prisma client generated!');
+          break;
+        } catch {
+          apiRetries--;
+
+          if (apiRetries === 0) {
+            throw new Error('API failed to become ready');
+          }
+
+          log(`Retrying in 3 seconds... (${apiRetries} attempts left)`);
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+      }
+    });
+
+    await step('9) Run Prisma migrations', () => {
+      const cmd =
+        'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api npx prisma migrate deploy';
+      exec(cmd);
+    });
+  }
+
+  const buildTime = Date.now() - startTime;
+  log(
+    `\n🎉 Build ${dryRun ? '(dry-run) ' : ''}completed in ${formatTime(buildTime)}!`,
+    colors.green,
+  );
+
+  // 10–11) Final startup & URLs only in FULL mode
+  if (!onlyFrontend && !onlyBackend) {
+    const serviceStartTime = Date.now();
+
+    await step('10) Start services in dev mode', () => {
+      const cmd = 'docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d';
+      exec(cmd);
+    });
+
+    await step('11) Wait and show URLs', async () => {
+      await waitForService('http://localhost:2999/api/health', 'API');
+      await waitForService('http://localhost:3001', 'Frontend');
+
+      const serviceTime = Date.now() - serviceStartTime;
+      log(
+        `\n🚀 All services ${dryRun ? '(dry-run) ' : ''}started in ${formatTime(serviceTime)}!`,
+        colors.green,
+      );
+      log('🌐 API: http://localhost:2999/api');
+      log('🌐 API Health: http://localhost:2999/api/health');
+      log('🌐 Frontend: http://localhost:3001');
+      log('📊 Database Admin: http://localhost:5555 (npm run prisma:studio)');
+
+      if (!dryRun) {
+        openBrowser('http://localhost:3001');
+      } else {
+        log('[dry-run] Would open browser at http://localhost:3001', colors.cyan);
+      }
+    });
+  } else if (onlyFrontend) {
+    log(
+      `\n✅ Frontend build & container ${dryRun ? '(dry-run) ' : ''}ready in ${formatTime(buildTime)}!`,
+      colors.green,
+    );
+  } else if (onlyBackend) {
+    log(
+      `\n✅ Backend build & containers (API, DB, Redis) ${dryRun ? '(dry-run) ' : ''}ready in ${formatTime(buildTime)}!`,
+      colors.green,
+    );
+  }
+
+  const mode = onlyFrontend ? 'frontend-only' : onlyBackend ? 'backend-only' : 'full';
+  log(
+    `\n📦 Summary: mode=${mode}, cleanup=${!skipCleanup}, deps=${!skipDeps}, build=${!skipBuild}, parallel-build=${parallelBuild}, prune=${doPrune}, dry-run=${dryRun}`,
+    colors.bright,
+  );
+}
+
+main().catch((e) => {
+  log(`❌ Script failed: ${e.message}`, colors.red);
+  process.exit(1);
+});

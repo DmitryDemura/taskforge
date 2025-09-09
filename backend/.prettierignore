@@ -1,0 +1,46 @@
+# Build output
+dist/
+build/
+.out/
+
+# Dependencies
+node_modules/
+
+# Generated files
+**/*.d.ts
+**/*.js
+**/*.mjs
+**/*.cjs
+**/*.js.map
+
+# Prisma generated
+prisma/generated/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
