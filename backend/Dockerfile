@@ -12,9 +12,9 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
-RUN npm install --omit=dev && npm install prisma @prisma/client
+RUN npm install --omit=dev && npm install prisma @prisma/client @nestjs/cli
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
-RUN npx prisma generate
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 EXPOSE 2999
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npx prisma generate && node dist/main.js"]

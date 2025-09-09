@@ -1,0 +1,12 @@
+# Override for local development
+# Use this when running backend locally but need DB and Redis from Docker
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up db redis
+
+services:
+  db:
+    ports:
+      - '5433:5432'
+
+  redis:
+    ports:
+      - '6380:6379'

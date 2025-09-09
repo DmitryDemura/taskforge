@@ -1,6 +1,6 @@
 FROM node:20
 WORKDIR /app
 COPY package*.json ./
-RUN npm i
+RUN npm i && npm install -g @nestjs/cli
 EXPOSE 2999
 CMD ["npm", "run", "start:dev"]

@@ -1,4 +1,14 @@
 services:
+  # Expose database port for local development
+  db:
+    ports:
+      - '5433:5432'
+
+  # Expose Redis port for local development
+  redis:
+    ports:
+      - '6380:6379'
+
   api:
     build:
       context: ./backend
@@ -28,12 +38,13 @@ services:
       - HOST=0.0.0.0
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3001
-      - NUXT_API_BASE=http://api:2999
-      - NUXT_PUBLIC_API_BASE=http://localhost:2999
+      - NUXT_API_BASE=http://api:2999/api
+      - NUXT_PUBLIC_API_BASE=http://localhost:2999/api
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     ports:
       - '3001:3001'
-    command: npm run dev -- --host 0.0.0.0
+    command: npm run dev
     depends_on:
       - api
