@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 
 ENV CI=true \
@@ -9,14 +9,14 @@ ENV CI=true \
     NUXT_EXPERIMENTAL_OXC=false \
     DISABLE_OXC=true
 
-# Copy only package.json first
-COPY package.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install dependencies
 RUN npm install --no-fund --no-audit
 
 # Copy source code
-COPY server.js ./
+COPY . .
 
 EXPOSE 3001
 
