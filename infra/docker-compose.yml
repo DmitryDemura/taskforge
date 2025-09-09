@@ -60,7 +60,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile.dev
     environment:
-      NUXT_PUBLIC_API_BASE: http://api:2999
+      NUXT_PUBLIC_API_BASE: http://api:2999/api
     ports:
       - '3001:3001'
     volumes:
