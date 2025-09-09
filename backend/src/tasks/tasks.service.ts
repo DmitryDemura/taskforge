@@ -20,8 +20,7 @@ export class TasksService {
       },
     });
 
-    // Invalidate cache
-    await this.redis.del('tasks:all');
+    await this.invalidateTaskListCache();
 
     return task;
   }
@@ -116,9 +115,8 @@ export class TasksService {
       },
     });
 
-    // Invalidate cache
     await this.redis.del(`task:${id}`);
-    await this.redis.del('tasks:all');
+    await this.invalidateTaskListCache();
 
     return task;
   }
@@ -128,10 +126,17 @@ export class TasksService {
       where: { id },
     });
 
-    // Invalidate cache
     await this.redis.del(`task:${id}`);
-    await this.redis.del('tasks:all');
+    await this.invalidateTaskListCache();
 
     return { message: 'Task deleted successfully' };
+  }
+
+  private async invalidateTaskListCache() {
+    const keys = await this.redis.client.keys('tasks:*');
+
+    if (keys.length > 0) {
+      await this.redis.client.del(...keys);
+    }
   }
 }
