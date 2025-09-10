@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   ssr: false,
 
   // Use app directory structure
-  srcDir: 'app/',
+  srcDir: 'app',
 
   devtools: {
     enabled: false,
@@ -16,14 +16,33 @@ export default defineNuxtConfig({
     port: 3001,
   },
 
-  // Minimal modules to avoid oxc-parser issues
-  modules: ['@pinia/nuxt'],
+  css: [
+    '@/assets/css/fonts.css',
+    'primevue/resources/themes/lara-light-blue/theme.css',
+    'primevue/resources/primevue.min.css',
+    'primeicons/primeicons.css',
+    '@/assets/styles/main.scss',
+    '@/assets/styles/themes.scss',
+  ],
+
+  app: {
+    head: {
+      title: 'TaskForge UI',
+      meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    },
+  },
+
+  routeRules: {
+    '/api/**': { proxy: 'http://localhost:2999/**' },
+  },
+
+  build: {
+    transpile: ['primevue'],
+  },
 
   runtimeConfig: {
-    apiBase: process.env.NUXT_API_BASE || 'http://api:2999/api',
-    public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:2999/api',
-    },
+    public: { apiBase: '/api' },
   },
 
   // Disable features that might use oxc-parser
@@ -33,7 +52,7 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    minify: false,
+    devProxy: { '/api/': { target: 'http://localhost:2999/', changeOrigin: true } },
   },
 
   // Use vite with custom configuration

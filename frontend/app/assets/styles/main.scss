@@ -1,0 +1,219 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  overflow-y: auto;
+}
+
+body,
+main,
+.container {
+  scrollbar-width: none;
+}
+body::-webkit-scrollbar,
+main::-webkit-scrollbar,
+.container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+:root {
+  --tf-bg: #ffffff;
+  --tf-fg: #111827;
+  --tf-muted: #6b7280;
+  --tf-surface: #ffffff;
+  --tf-border: #e5e7eb;
+}
+
+:root[data-theme='dark'] {
+  --tf-bg: #0b0f17;
+  --tf-fg: #e5e7eb;
+  --tf-muted: #9ca3af;
+  --tf-surface: #0f1520;
+  --tf-border: #1f2937;
+}
+
+html,
+body {
+  background: var(--tf-bg);
+  color: var(--tf-fg);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial,
+    'Apple Color Emoji',
+    'Segoe UI Emoji';
+  line-height: 1.5;
+}
+
+.vstack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hstack {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.container {
+  width: min(1200px, 100%);
+  margin-inline: auto;
+  padding: 16px;
+}
+
+.header {
+  --header-h: 120px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  min-height: var(--header-h);
+  max-height: var(--header-h);
+  padding-block: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--tf-bg);
+  border-bottom: 1px solid var(--tf-border);
+  padding: 12px 16px;
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+
+  .logo-mark {
+    width: 120px;
+    height: 120px;
+    flex: 0 0 auto;
+    inline-size: 120px;
+    block-size: 120px;
+  }
+}
+
+.header :where(.p-inputtext, .p-dropdown, .p-button) {
+  height: 40px;
+}
+
+@media (max-width: 640px) {
+  .header {
+    --header-h: 60px;
+  }
+  .header .logo-mark {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+#appTitle,
+.header h1,
+.header h2 {
+  margin: 0;
+  line-height: 1;
+}
+
+#appTitle {
+  margin: 0;
+}
+
+/* DataTable shell */
+.p-datatable .p-datatable-wrapper {
+  background: var(--tf-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: 10px;
+}
+
+/* DataTable header cells (no sticky to avoid overlay issues) */
+.p-datatable .p-datatable-thead > tr > th {
+  position: static;
+  top: auto;
+  background: var(--tf-surface);
+  border-bottom: 1px solid var(--tf-border);
+}
+
+/* Row status dots */
+tr.status-todo {
+  --row-accent: #60a5fa;
+}
+tr.status-inprog {
+  --row-accent: #f59e0b;
+}
+tr.status-done {
+  --row-accent: #10b981;
+}
+
+.p-datatable tbody tr.status-todo td:first-child::before,
+.p-datatable tbody tr.status-inprog td:first-child::before,
+.p-datatable tbody tr.status-done td:first-child::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  margin-right: 6px;
+  background: var(--row-accent);
+}
+
+.table-search {
+  min-width: 240px;
+}
+
+/* Accessible focus handling */
+:where(.p-dropdown, .p-inputtext, .p-button, .p-multiselect, .p-calendar):focus {
+  outline: none !important;
+}
+:where(.p-dropdown, .p-inputtext, .p-button, .p-multiselect, .p-calendar).p-focus {
+  box-shadow: none !important;
+}
+:where(.p-dropdown, .p-inputtext, .p-button, .p-multiselect, .p-calendar):focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+  box-shadow: none !important;
+  border-radius: 10px;
+}
+
+/* Skip-link helper */
+.sr-only-focusable {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.sr-only-focusable:focus {
+  left: 12px;
+  top: 12px;
+  width: auto;
+  height: auto;
+  background: #fff;
+  color: #000;
+  padding: 6px 10px;
+  border-radius: 6px;
+  z-index: 9999;
+}
+
+/* Small button motion */
+.p-button.p-button-rounded {
+  transition: transform 0.12s ease;
+}
+.p-button.p-button-rounded:hover {
+  transform: translateY(-1px);
+}

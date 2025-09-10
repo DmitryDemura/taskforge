@@ -1,0 +1,117 @@
+/* ===== PrimeVue tokens (light) ===== */
+:root {
+  --p-surface-0: #ffffff;
+
+  --p-content-color: #111827;
+  --p-content-inverse-color: #ffffff;
+
+  --p-content-background: #ffffff;
+  --p-content-border-color: rgba(0, 0, 0, 0.08);
+
+  --p-overlay-background: #ffffff;
+  --p-overlay-border-color: var(--p-content-border-color);
+}
+
+/* ===== PrimeVue tokens (dark) ===== */
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --p-surface-0: #0f172a;
+  --p-surface-50: #111827;
+  --p-surface-100: #0b1220;
+  --p-surface-200: #111827;
+  --p-surface-300: #1f2937;
+  --p-surface-400: #334155;
+  --p-surface-500: #475569;
+  --p-surface-600: #64748b;
+
+  --p-content-color: #e5e7eb;
+  --p-content-inverse-color: var(--p-surface-0);
+
+  --p-content-background: var(--p-surface-100);
+  --p-content-border-color: rgba(255, 255, 255, 0.06);
+
+  --p-overlay-background: var(--p-surface-100);
+  --p-overlay-border-color: var(--p-content-border-color);
+  background-color: var(--p-surface-0);
+}
+
+/* ===== PrimeVue overlays ===== */
+.p-dropdown-panel,
+.p-multiselect-panel,
+.p-autocomplete-panel,
+.p-datepicker,
+.p-overlaypanel,
+.p-tooltip {
+  position: absolute;
+  background-color: var(--p-overlay-background, #fff) !important;
+  border: 1px solid var(--p-overlay-border-color, #e5e7eb) !important;
+  color: var(--p-content-color, #111827) !important;
+  z-index: 9999 !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== PrimeVue controls ===== */
+.p-dropdown,
+.p-multiselect,
+.p-inputtext {
+  background-color: var(--p-content-background, #fff);
+  border-color: var(--p-content-border-color, rgba(0, 0, 0, 0.08));
+  color: var(--p-content-color, #111827);
+}
+
+/* ===== DataTable base ===== */
+.p-datatable,
+.p-datatable .p-datatable-wrapper,
+.p-datatable .p-datatable-header,
+.p-datatable .p-datatable-footer,
+.p-datatable .p-paginator {
+  background: var(--p-content-background);
+  color: var(--p-content-color);
+}
+.p-datatable.p-datatable-scrollable
+  > .p-datatable-wrapper
+  > .p-datatable-table
+  > .p-datatable-thead,
+.p-datatable .p-datatable-thead {
+  background-color: var(--p-content-background) !important;
+  border-bottom: 1px solid var(--p-content-border-color) !important;
+}
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr > td,
+.p-datatable .p-datatable-tfoot > tr > td {
+  background: var(--p-content-background);
+  border-color: var(--p-content-border-color);
+  color: var(--p-content-color);
+}
+
+/* ===== Focus ring normalization ===== */
+:where(.p-dropdown, .p-inputtext, .p-button, .p-multiselect, .p-calendar):focus {
+  outline: none !important;
+}
+:where(.p-dropdown, .p-inputtext, .p-button, .p-multiselect, .p-calendar).p-focus {
+  box-shadow: none !important;
+}
+:where(.p-dropdown, .p-inputtext, .p-button, .p-multiselect, .p-calendar):focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+  box-shadow: none !important;
+  border-radius: 10px;
+}
+
+.p-dialog-mask {
+  z-index: 3000 !important;
+}
+.p-dialog {
+  z-index: 3100 !important;
+}
+
+.p-dropdown-panel,
+.p-multiselect-panel,
+.p-autocomplete-panel,
+.p-datepicker,
+.p-overlaypanel,
+.p-tooltip {
+  position: absolute;
+  z-index: 3500 !important;
+}
