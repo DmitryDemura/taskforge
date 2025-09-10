@@ -95,6 +95,8 @@ environments:
 - **[npm](https://www.npmjs.com/) >= 10.0.0**
 - **[Docker Desktop](https://www.docker.com/products/docker-desktop)** with
   Compose V2
+  > ⚠️ Before starting local development, make sure **Docker Desktop is
+  > running**.
 
 ## 🚀 Quick Start
 
