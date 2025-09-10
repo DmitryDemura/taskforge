@@ -38,6 +38,57 @@ TaskForge demonstrates a production-ready architecture with:
   quality tools with unified flat config
 - **Node.js 20+** - Runtime environment (Alpine Linux in containers)
 
+## 🏗️ Architecture & Technical Decisions
+
+### Project Structure
+
+```
+taskforge/
+├── backend/                 # NestJS API server
+│   ├── src/
+│   │   ├── tasks/          # Task management module
+│   │   ├── prisma/         # Database service
+│   │   └── redis/          # Caching service
+│   ├── prisma/             # Database schema & migrations
+│   └── test/               # E2E tests
+├── frontend/               # Nuxt.js SPA
+│   ├── app/
+│   │   ├── components/     # Vue components
+│   │   ├── composables/    # Reusable logic
+│   │   ├── stores/         # Pinia state management
+│   │   └── assets/         # Static assets & styles
+│   └── public/             # Public assets
+└── scripts/                # Development utilities
+```
+
+### Key Technical Decisions
+
+#### Nuxt.js Version Selection (v3.8.0)
+
+We carefully selected **Nuxt 3.8.0** to avoid compatibility issues with Docker
+environments:
+
+- **oxc-parser conflicts**: Newer Nuxt versions use oxc-parser which has
+  compatibility issues in Docker containers
+- **Rollup stability**: Version 3.8.0 provides stable Rollup integration without
+  build failures
+- **Docker optimization**: Configured with explicit oxc disabling and esbuild
+  fallback for reliable containerized builds
+
+#### Frontend Architecture
+
+- **SPA Mode**: Disabled SSR for optimal client-side performance
+- **Component-based**: Modular Vue components with TypeScript
+- **State Management**: Pinia for reactive state with localStorage persistence
+- **UI Framework**: PrimeVue for consistent, accessible components
+
+#### Backend Architecture
+
+- **Modular Design**: NestJS modules for scalable code organization
+- **Caching Strategy**: Redis for API response caching (5-10 min TTL)
+- **Database**: PostgreSQL with Prisma ORM for type-safe queries
+- **Validation**: Class-validator for request/response validation
+
 ## ⚙️ Requirements
 
 - **[Node.js](https://nodejs.org/) >= 20.0.0**
@@ -353,8 +404,6 @@ npm run dev
 # Opens at http://localhost:3000
 ```
 
-````
-
 ### Step 4: Logs Verification
 
 ```bash
@@ -366,7 +415,7 @@ docker compose logs api
 docker compose logs frontend
 docker compose logs db
 docker compose logs redis
-````
+```
 
 ### Expected Results:
 
@@ -610,15 +659,20 @@ GET    /api/health             # Service health status (DB + Redis)
 ### Query Parameters
 
 ```http
-GET /api/tasks?status=pending&search=test&page=1&limit=10
+GET /api/tasks?status=pending&search=test&title=task&dueDate=2024&sort=asc&sortField=title&page=1&limit=10
 ```
 
 **Available filters:**
 
 - `status`: `pending` | `in-progress` | `completed` | `cancelled`
-- `search`: Search in title and description
+- `search`: Global search in title and description (takes precedence over
+  individual field filters)
+- `title`: Filter by task title (only when no global search)
+- `dueDate`: Filter by due date (only when no global search)
+- `sort`: Sort order - `asc` | `desc`
+- `sortField`: Sort by field - `title` | `status` | `dueDate` | `createdAt`
 - `page`: Page number (default: 1)
-- `limit`: Items per page (default: 10)
+- `limit`: Items per page (default: 10, max: 100)
 
 ## 📁 Project Structure
 
@@ -651,18 +705,34 @@ taskforge/
 
 - **NestJS Modules:** Clean separation of concerns (Health, Tasks, Prisma)
 - **Prisma ORM:** Type-safe database queries with automatic migrations
-- **Redis Caching:** Task list caching with status-based invalidation
-- **Validation:** Class-validator for request DTOs
+- **Redis Caching:** Task list caching with status-based invalidation (5-10 min
+  TTL)
+- **Validation:** Class-validator for request DTOs with comprehensive parameter
+  validation
 - **Error Handling:** Global exception filters
+- **Query Processing:** Server-side filtering, sorting, and pagination for
+  optimal performance
+  - **Filtering:** Global search across title/description OR individual field
+    filters
+  - **Sorting:** Database-level sorting by title, status, dueDate, or createdAt
+  - **Pagination:** Offset-based pagination with configurable limits (max 100
+    per page)
 
 ### Frontend Architecture
 
 - **Nuxt 3 (SPA Mode):** Single Page Application with file-based routing
-- **PrimeVue Aura:** Consistent UI components and theming
-- **Pinia:** State management for Vue applications
+- **PrimeVue Aura:** Consistent UI components and theming with DataTable for
+  advanced features
+- **Pinia:** State management with localStorage persistence for user preferences
 - **Composables:** Reusable logic for API calls and state management
 - **TypeScript:** Full type safety across the application
 - **ESLint Flat Config:** Modern linting configuration
+- **Smart Data Handling:**
+  - **Server-side operations:** Filtering, sorting, and pagination handled by
+    backend
+  - **Client-side state:** User preferences (page size, sort order) persisted
+    locally
+  - **Real-time updates:** Automatic data refresh with optimistic UI updates
 
 ### Infrastructure
 
@@ -739,14 +809,29 @@ docker compose exec api npx prisma generate
 
 ## 🚧 Future Enhancements
 
+### Immediate Improvements
+
+- **Enhanced Filtering:** Advanced search with date ranges, priority levels
+- **Bulk Operations:** Multi-select tasks for batch updates/deletion
+- **Task Categories:** Organize tasks with tags and categories
+- **Due Date Notifications:** Browser notifications for approaching deadlines
+
+### Technical Enhancements
+
 - **Testing:** Unit tests with Jest, E2E tests with Playwright
-- **CI/CD:** Automated testing and deployment pipelines
-- **Monitoring:** Application metrics and logging
+- **CI/CD:** Automated testing and deployment pipelines with GitHub Actions
+- **Monitoring:** Application metrics with Prometheus, logging with Winston
 - **Security:** Rate limiting, CORS configuration, input sanitization
 - **Performance:** Database indexing, query optimization, CDN integration
 - **Documentation:** OpenAPI/Swagger documentation for API endpoints
+
+### Feature Expansions
+
 - **Authentication:** User management and JWT-based authentication
 - **Real-time Updates:** WebSocket integration for live task updates
+- **Mobile App:** React Native or Flutter mobile application
+- **Collaboration:** Team workspaces, task assignments, comments
+- **Integrations:** Calendar sync, email notifications, third-party APIs
 
 ## 📄 License
 
