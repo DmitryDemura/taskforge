@@ -16,7 +16,7 @@ in dev.
 
 ## Overview
 
-- Backend: NestJS 11 (REST) + Prisma + PostgreSQL + Redis
+- Backend: NestJS 11 (REST) + Prisma + PostgresSQL + Redis
 - Frontend: Nuxt 4 + PrimeVue 4 (dev server proxies to API)
 - Infra: Docker Compose for DB/Redis/API, Node 20 LTS
 - Quality: ESLint flat config, Prettier, Husky + lint-staged
@@ -24,7 +24,7 @@ in dev.
 
 ## Tech Stack
 
-- Backend: NestJS, Prisma, PostgreSQL, Redis, RxJS
+- Backend: NestJS, Prisma, PostgresSQL, Redis, RxJS
 - Frontend: Nuxt 4, Vue 3.5, PrimeVue 4, Pinia, TypeScript
 - DevOps: Docker Compose, Husky, Commitlint, Renovate, EditorConfig
 
@@ -162,7 +162,7 @@ npm run fix                # Prettier write + ESLint --fix
 
 ## Troubleshooting
 
-- Ports in use (2999/3001/5432/6379): free them or adjust envs.
+- Ports in use (2999/3001/15433/6380): free them or adjust envs. In dev, DB is exposed on host 15433->5432 and Redis on 6380->6379.
 - Prisma Client platform mismatch: install deps inside container and run
   `prisma generate` (handled by dev compose).
 - API unreachable from Nuxt: ensure `backend:up` is running, then restart

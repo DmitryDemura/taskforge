@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":labels(deps)",
+    ":timezone(Europe/Moscow)",
+    ":separateMajorReleases"
+  ],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "automerge": false,
+      "schedule": ["after 9am and before 7pm every weekday"],
+      "stabilityDays": 3
+    },
+    {
+      "description": "Allow minor/patch updates only for Nest and Prisma",
+      "matchPackagePatterns": ["^@nestjs/", "^prisma$", "^@prisma/client$"],
+      "matchUpdateTypes": ["patch", "minor"]
+    }
+  ]
+}
