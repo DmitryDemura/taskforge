@@ -5,6 +5,13 @@
   "main": "index.js",
   "scripts": {
     "prepare": "husky",
+    "deps:reinstall": "node scripts/reinstall-deps.js",
+    "backend:build": "docker compose -f docker-compose.yml -f docker-compose.dev.yml build --no-cache api",
+    "backend:up": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db redis api",
+    "backend:down": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v --remove-orphans",
+    "frontend:dev": "npm run dev --prefix frontend",
+    "check": "node scripts/lint-format.mjs check",
+    "fix": "node scripts/lint-format.mjs fix",
     "up": "docker compose up -d",
     "down": "docker compose down -v --remove-orphans",
     "rebuild": "node scripts/rebuild.js",
