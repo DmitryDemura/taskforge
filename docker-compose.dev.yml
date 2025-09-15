@@ -2,7 +2,7 @@ services:
   # Expose database port for local development
   db:
     ports:
-      - '5433:5432'
+      - '15433:5432'
 
   # Expose Redis port for local development
   redis:
