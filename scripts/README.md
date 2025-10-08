@@ -11,7 +11,11 @@ Utility scripts used across the repo. Prefer npm scripts in the root
 - `backend-rebuild.js` � Backend rebuild helper. Use via:
   - `npm run backend:rebuild:full` (with deps; cleans before install)
   - `npm run backend:rebuild:fast` (without deps)
-  - Note: frontend/full modes are deprecated; script enforces backend-only.
+  - `npm run backend:stop` (stop backend containers if you started them
+    manually)
+  - Note: backend rebuild no longer auto-starts containers; launch services
+    yourself when needed.
+  - Frontend/full modes are deprecated; script enforces backend-only.
 - `lint-format.mjs` � Unified `check`/`fix` runner for Prettier + ESLint.
 - `clean.js` � Cleanup Docker resources and node_modules (destructive).
 

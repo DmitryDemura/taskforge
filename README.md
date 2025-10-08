@@ -3,7 +3,6 @@
 [![Node.js](https://img.shields.io/badge/Node-20_LTS-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Nuxt](https://img.shields.io/badge/Nuxt-4-00DC82?logo=nuxt.js&logoColor=white)](https://nuxt.com/)
 [![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v2-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![ESLint](https://img.shields.io/badge/ESLint-9-4B32C3?logo=eslint&logoColor=white)](https://eslint.org/)
@@ -11,20 +10,21 @@
 [![License](https://img.shields.io/badge/License-Proprietary-orange.svg)](LICENSE)
 
 Modern full-stack task management app with a decoupled Nuxt 4 frontend and
-NestJS + Prisma backend. Backend services run via Docker; frontend runs locally
-in dev.
+NestJS backend that caches via Redis (with a safe in-memory fallback) and stores
+tasks in-memory for quick iteration. Backend services can run against Docker
+Redis or operate fully locally; the frontend runs locally in dev.
 
 ## Overview
 
-- Backend: NestJS 11 (REST) + Prisma + PostgresSQL + Redis
+- Backend: NestJS 11 (REST) + Redis-backed caching + in-memory task store
 - Frontend: Nuxt 4 + PrimeVue 4 (dev server proxies to API)
-- Infra: Docker Compose for DB/Redis/API, Node 20 LTS
+- Infra: Docker Compose for Redis/API, Node 20 LTS
 - Quality: ESLint flat config, Prettier, Husky + lint-staged
 - Docs: Swagger UI at `/api/docs` (enabled in dev)
 
 ## Tech Stack
 
-- Backend: NestJS, Prisma, PostgresSQL, Redis, RxJS
+- Backend: NestJS, Redis (graceful fallback to in-memory cache), RxJS
 - Frontend: Nuxt 4, Vue 3.5, PrimeVue 4, Pinia, TypeScript
 - DevOps: Docker Compose, Husky, Commitlint, Renovate, EditorConfig
 
@@ -32,21 +32,16 @@ in dev.
 
 ```
 taskforge/
-+- backend/                  # NestJS API server
-|  +- src/
-|  |  +- health/             # Health check
-|  |  +- tasks/              # Tasks CRUD
-|  |  +- prisma/             # Prisma service module
-|  |  L- redis/              # Redis module
-|  L- prisma/
-|     +- schema.prisma       # DB schema
-|     L- seed.ts             # Demo seed data
-+- frontend/                 # Nuxt 4 SPA (runs locally)
-|  L- app/
-|     +- components/
-|     +- composables/
-|     +- stores/
-|     L- utils/
++- apps/
+|  +- backend/               # NestJS API server
+|  |  +- src/
+|  |  |  +- health/          # Service health checks
+|  |  |  +- tasks/           # Tasks CRUD + caching
+|  |  |  L- redis/           # Redis module + fallback client
+|  |  L- test/               # e2e specs
+|  L- vue/                   # Nuxt 4 SPA (runs locally)
+|     L- app/                # Nuxt app directory
++- packages/                 # Shared configs/libraries
 +- docker-compose.yml        # Base services
 +- docker-compose.dev.yml    # Dev overrides
 L- scripts/                  # Dev/rebuild/utility scripts
@@ -63,17 +58,14 @@ L- scripts/                  # Dev/rebuild/utility scripts
 Copy example envs:
 
 ```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+cp apps/backend/.env.example apps/backend/.env
+cp apps/vue/.env.example apps/vue/.env
 ```
 
 Backend `.env` (key vars):
 
-- `DATABASE_URL=postgresql://taskforge:taskforge@db:5432/taskforge`
 - `REDIS_URL=redis://redis:6379`
 - `PORT=2999`
-- `ALLOWED_ORIGINS=http://127.0.0.1:3001`
-- `SWAGGER_ENABLE=true`
 
 Frontend `.env` (key vars):
 
@@ -84,39 +76,58 @@ Frontend `.env` (key vars):
 
 ### Quick Start (from scratch)
 
-```bash
-# 1) Copy environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+1. Copy environment files:
 
-# 2) Install all dependencies (root + apps)
-npm run deps:reinstall
+   ```bash
+   cp apps/backend/.env.example apps/backend/.env
+   cp apps/vue/.env.example apps/vue/.env
+   ```
 
-# 3) Compile backend (Docker image build)
-npm run backend:build
+   PowerShell:
 
-# 4) Start backend services (API + DB + Redis)
-npm run backend:up
-# API: http://127.0.0.1:2999 | Swagger: http://127.0.0.1:2999/api/docs
+   ```powershell
+   Copy-Item apps/backend/.env.example apps/backend/.env
+   Copy-Item apps/vue/.env.example apps/vue/.env
+   ```
 
-# 5) Verify health
-curl http://127.0.0.1:2999/api/health
+2. Install workspace dependencies (Node 20 required):
 
-# 6) Start frontend (in another terminal)
-npm run frontend:dev
+   ```bash
+   npm install
+   ```
 
-# 7) Open in Chrome
-# URL: http://127.0.0.1:3001
+3. (Optional but recommended) Start Redis via Docker:
 
-# 8) Enjoy 🎉
-```
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d redis
+   ```
 
-Windows PowerShell (alternative for step 1):
+   If Redis is not available, the backend automatically falls back to an
+   in-memory cache—handy for quick local experiments.
 
-```powershell
-Copy-Item backend/.env.example backend/.env
-Copy-Item frontend/.env.example frontend/.env
-```
+4. Start the backend in watch mode:
+
+   ```bash
+   npm run backend:dev
+   ```
+
+   - API base: http://127.0.0.1:2999
+   - Swagger: http://127.0.0.1:2999/api/docs
+
+5. Start the Nuxt dev server in another terminal:
+
+   ```bash
+   npm run dev -w apps/vue
+   ```
+
+   - Frontend: http://127.0.0.1:3001
+
+6. When you finish with Docker services, stop Redis (and any other backend
+   containers you started):
+
+   ```bash
+   npm run backend:stop
+   ```
 
 ## API Docs (Swagger)
 
@@ -124,24 +135,14 @@ Copy-Item frontend/.env.example frontend/.env
 
 ## Commands Cheatsheet
 
-Key scripts; full list is in `package.json`.
+Core npm scripts (see `package.json` for the complete list):
 
-```bash
-# Backend
-npm run backend:build      # Build API Docker image
-npm run backend:up         # Start API + DB + Redis
-npm run backend:down       # Stop and remove volumes
-
-# Frontend
-npm run frontend:dev       # Start Nuxt dev server (http://127.0.0.1:3001)
-
-# Format & Lint
-npm run check              # Prettier check + ESLint
-npm run fix                # Prettier write + ESLint --fix
-```
-
-- Swagger in dev: http://127.0.0.1:2999/api/docs
-- Set `SWAGGER_ENABLE=true` to expose docs in production
+- `npm run backend:dev` — start the Nest backend with watch mode
+- `npm run backend:rebuild` — clean & rebuild backend artifacts (no auto-start)
+- `npm run backend:stop` — stop Docker containers you started manually
+- `npm run dev -w apps/vue` — run the Nuxt frontend dev server
+- `npm run lint` / `npm run lint:fix` — shared lint/format checks
+- `npm run rebuild` — orchestrated rebuild across workspaces
 
 ## API Tips
 
@@ -157,16 +158,17 @@ npm run fix                # Prettier write + ESLint --fix
 
 ## Testing
 
-- Backend: Jest (unit, e2e) under `backend/`
-- Frontend: Vitest (`frontend/tests`)
+- Backend: Jest (unit + e2e) under `apps/backend`
+- Frontend: Vitest (`apps/vue/tests`)
 
 ## Troubleshooting
 
-- Ports in use (2999/3001/15433/6380): free them or adjust envs. In dev, DB is exposed on host 15433->5432 and Redis on 6380->6379.
-- Prisma Client platform mismatch: install deps inside container and run
-  `prisma generate` (handled by dev compose).
-- API unreachable from Nuxt: ensure `backend:up` is running, then restart
-  `frontend:dev`.
+- Ports in use (2999/3001/6379): free them or adjust envs. Docker maps Redis to
+  localhost:6379 by default.
+- API unreachable from Nuxt: ensure `npm run backend:dev` is active (or your
+  Docker container is up), then restart the Nuxt dev server.
+- Redis not running: either start the Docker service (see Quick Start) or rely
+  on the built-in in-memory cache—logs will show which mode is active.
 
 ## License
 

@@ -20,11 +20,8 @@ dist/
 .env.*
 !.env.example
 
-# --- Prisma ---
-prisma/dev.db
 *.db-journal
 backend/generated/
-backend/node_modules/@prisma/client/
 
 # --- Docker ---
 docker-data/

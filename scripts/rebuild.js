@@ -201,12 +201,12 @@ async function main() {
   if (!skipCleanup) {
     await step('2) Clean node_modules', () => {
       if (onlyFrontend) {
-        removeIfExists('frontend/node_modules');
+        removeIfExists('apps/vue/node_modules');
       } else if (onlyBackend) {
-        removeIfExists('backend/node_modules');
+        removeIfExists('apps/backend/node_modules');
       } else {
-        removeIfExists('backend/node_modules');
-        removeIfExists('frontend/node_modules');
+        removeIfExists('apps/backend/node_modules');
+        removeIfExists('apps/vue/node_modules');
         removeIfExists('node_modules'); // root - only in full mode
       }
     });
@@ -216,12 +216,12 @@ async function main() {
   if (!skipCleanup) {
     await step('3) Remove package-locks', () => {
       if (onlyFrontend) {
-        removeIfExists('frontend/package-lock.json');
+        removeIfExists('apps/vue/package-lock.json');
       } else if (onlyBackend) {
-        removeIfExists('backend/package-lock.json');
+        removeIfExists('apps/backend/package-lock.json');
       } else {
-        removeIfExists('backend/package-lock.json');
-        removeIfExists('frontend/package-lock.json');
+        removeIfExists('apps/backend/package-lock.json');
+        removeIfExists('apps/vue/package-lock.json');
         removeIfExists('package-lock.json'); // root - only in full mode
       }
     });
@@ -272,14 +272,14 @@ async function main() {
       exec(npmInstallRoot);
 
       if (onlyBackend) {
-        const cmd = 'npm install --prefix backend';
+        const cmd = 'npm install --workspace apps/backend';
         exec(cmd);
       } else if (onlyFrontend) {
-        const cmd = 'npm install --prefix frontend';
+        const cmd = 'npm install --workspace apps/vue';
         exec(cmd);
       } else {
-        const cmdBe = 'npm install --prefix backend';
-        const cmdFe = 'npm install --prefix frontend';
+        const cmdBe = 'npm install --workspace apps/backend';
+        const cmdFe = 'npm install --workspace apps/vue';
         exec(cmdBe);
         exec(cmdFe);
       }
@@ -310,104 +310,82 @@ async function main() {
   }
 
   // 7) Start services
-  await step('7) Start services', () => {
-    const composeFiles = '-f docker-compose.yml -f docker-compose.dev.yml';
+  if (onlyBackend) {
+    log(
+      '\nℹ️ Skipping service startup in backend-only mode. Start containers manually if needed (e.g. docker compose up api redis).',
+      colors.yellow,
+    );
+  } else {
+    await step('7) Start services', () => {
+      const composeFiles = '-f docker-compose.yml -f docker-compose.dev.yml';
 
-    if (onlyBackend) {
-      const cmd = `docker compose ${composeFiles} up -d db redis api`;
-      exec(cmd);
-    } else if (onlyFrontend) {
-      const cmd = `docker compose ${composeFiles} up -d frontend`;
-      exec(cmd);
-    } else {
-      const cmd = `docker compose ${composeFiles} up -d db redis api frontend`;
-      exec(cmd);
-    }
-  });
+      if (onlyFrontend) {
+        const cmd = `docker compose ${composeFiles} up -d frontend`;
+        exec(cmd);
+      } else {
+        const cmd = `docker compose ${composeFiles} up -d redis api frontend`;
+        exec(cmd);
+      }
+    });
+  }
 
-  // 8–9) Backend-only steps (wait + prisma)
+  // 8) Backend-only steps (wait for supporting services)
   if (!onlyFrontend) {
-    await step('8) Wait for DB/Redis/API', async () => {
-      log('Waiting for database to be ready...');
+    if (onlyBackend) {
+      log(
+        '\nℹ️ Skipping container readiness checks in backend-only mode because services were not started automatically.',
+        colors.yellow,
+      );
+    } else {
+      await step('8) Wait for Redis/API', async () => {
+        log('Waiting for Redis to be ready...');
 
-      let dbRetries = 30;
+        let redisRetries = 30;
 
-      while (dbRetries > 0) {
-        try {
-          const cmd =
-            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec db pg_isready -U taskforge -d taskforge';
-          exec(cmd, { stdio: 'pipe' });
-          log('Database is ready!');
-          break;
-        } catch {
-          dbRetries--;
+        while (redisRetries > 0) {
+          try {
+            const cmd =
+              'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec redis redis-cli ping';
+            exec(cmd, { stdio: 'pipe' });
+            log('Redis is ready!');
+            break;
+          } catch {
+            redisRetries--;
 
-          if (dbRetries === 0) {
-            throw new Error('Database failed to become ready');
+            if (redisRetries === 0) {
+              throw new Error('Redis failed to become ready');
+            }
+
+            log(`Waiting for Redis... (${redisRetries} attempts left)`);
+            await new Promise((resolve) => setTimeout(resolve, 2000));
           }
-
-          log(`Waiting for database... (${dbRetries} attempts left)`);
-          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
-      }
 
-      log('Waiting for Redis to be ready...');
+        log('Waiting for API container to be ready...');
 
-      let redisRetries = 30;
+        let apiRetries = 60;
 
-      while (redisRetries > 0) {
-        try {
-          const cmd =
-            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec redis redis-cli ping';
-          exec(cmd, { stdio: 'pipe' });
-          log('Redis is ready!');
-          break;
-        } catch {
-          redisRetries--;
+        while (apiRetries > 0) {
+          try {
+            const cmd =
+              'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api echo "Container is ready"';
+            exec(cmd, { stdio: 'pipe' });
 
-          if (redisRetries === 0) {
-            throw new Error('Redis failed to become ready');
+            log('API container is ready!');
+            break;
+          } catch {
+            apiRetries--;
+
+            if (apiRetries === 0) {
+              throw new Error('API failed to become ready');
+            }
+
+            log(`Retrying in 3 seconds... (${apiRetries} attempts left)`);
+            await new Promise((resolve) => setTimeout(resolve, 3000));
           }
-
-          log(`Waiting for Redis... (${redisRetries} attempts left)`);
-          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
-      }
-
-      log('Waiting for API container to be ready...');
-
-      let apiRetries = 60;
-
-      while (apiRetries > 0) {
-        try {
-          let cmd =
-            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api echo "Container is ready"';
-          exec(cmd, { stdio: 'pipe' });
-
-          cmd =
-            'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api npx prisma generate';
-          exec(cmd, { stdio: 'pipe' });
-
-          log('API container is ready and Prisma client generated!');
-          break;
-        } catch {
-          apiRetries--;
-
-          if (apiRetries === 0) {
-            throw new Error('API failed to become ready');
-          }
-
-          log(`Retrying in 3 seconds... (${apiRetries} attempts left)`);
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-      }
-    });
-
-    await step('9) Run Prisma migrations', () => {
-      const cmd =
-        'docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api npx prisma migrate deploy';
-      exec(cmd);
-    });
+      });
+    }
   }
 
   const buildTime = Date.now() - startTime;
@@ -416,16 +394,16 @@ async function main() {
     colors.green,
   );
 
-  // 10–11) Final startup & URLs only in FULL mode
+  // 9–10) Final startup & URLs only in FULL mode
   if (!onlyFrontend && !onlyBackend) {
     const serviceStartTime = Date.now();
 
-    await step('10) Start services in dev mode', () => {
+    await step('9) Start services in dev mode', () => {
       const cmd = 'docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d';
       exec(cmd);
     });
 
-    await step('11) Wait and show URLs', async () => {
+    await step('10) Wait and show URLs', async () => {
       await waitForService('http://localhost:2999/api/health', 'API');
       await waitForService('http://localhost:3001', 'Frontend');
 
@@ -437,7 +415,6 @@ async function main() {
       log('🌐 API: http://localhost:2999/api');
       log('🌐 API Health: http://localhost:2999/api/health');
       log('🌐 Frontend: http://localhost:3001');
-      log('📊 Database Admin: http://localhost:5555 (npm run prisma:studio)');
 
       if (!dryRun) {
         openBrowser('http://localhost:3001');
@@ -452,8 +429,12 @@ async function main() {
     );
   } else if (onlyBackend) {
     log(
-      `\n✅ Backend build & containers (API, DB, Redis) ${dryRun ? '(dry-run) ' : ''}ready in ${formatTime(buildTime)}!`,
+      `\n✅ Backend rebuild ${dryRun ? '(dry-run) ' : ''}completed in ${formatTime(buildTime)}.`,
       colors.green,
+    );
+    log(
+      'ℹ️ Containers were not started automatically. Use docker compose or npm scripts to launch services when ready.',
+      colors.yellow,
     );
   }
 

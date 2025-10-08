@@ -4,7 +4,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npx prisma generate
 RUN npm run build
 
 # ---- runtime ----
@@ -12,9 +11,7 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
-RUN npm install --omit=dev && npm install prisma @prisma/client @nestjs/cli
+RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 EXPOSE 2999
-CMD ["sh", "-c", "npx prisma generate && node dist/main.js"]
+CMD ["node", "dist/main.js"]

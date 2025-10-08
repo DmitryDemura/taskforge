@@ -40,7 +40,6 @@ const eslintConfig = [
       'frontend/.output/**',
 
       // Backend specific
-      'backend/prisma/generated/**',
       'backend/src/**/__generated__/**',
 
       // File types to ignore

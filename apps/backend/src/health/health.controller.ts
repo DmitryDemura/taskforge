@@ -1,13 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
-  ) {}
+  constructor(private readonly redis: RedisService) {}
 
   @Get()
   async check() {
@@ -15,18 +11,9 @@ export class HealthController {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      database: 'unknown',
+      storage: 'in-memory',
       redis: 'unknown',
     };
-
-    // Check database connection
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-      checks.database = 'connected';
-    } catch {
-      checks.database = 'disconnected';
-      checks.status = 'error';
-    }
 
     // Check Redis connection
     try {

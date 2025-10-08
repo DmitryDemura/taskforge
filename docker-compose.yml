@@ -1,20 +1,4 @@
 services:
-  db:
-    image: postgres:16
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: taskforge
-      POSTGRES_PASSWORD: taskforge
-      POSTGRES_DB: taskforge
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U taskforge -d taskforge || exit 1']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
   redis:
     image: redis:7
     restart: unless-stopped
@@ -30,24 +14,20 @@ services:
 
   api:
     build:
-      context: ./backend
+      context: ./apps/backend
       dockerfile: Dockerfile
     working_dir: /app
     volumes:
-      - ./backend:/app
+      - ./apps/backend:/app
     environment:
-      DATABASE_URL: postgresql://taskforge:taskforge@db:5432/taskforge
       REDIS_URL: redis://redis:6379
       PORT: 2999
       NODE_ENV: development
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     ports:
       - '2999:2999'
-      - '5555:5555'
     command: node dist/main.js
     healthcheck:
       test:
@@ -62,7 +42,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./apps/vue
       dockerfile: Dockerfile
     environment:
       - NODE_ENV=production
@@ -72,5 +52,4 @@ services:
       - api
 
 volumes:
-  db_data:
   redis_data:

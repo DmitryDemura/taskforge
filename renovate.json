@@ -16,8 +16,8 @@
       "stabilityDays": 3
     },
     {
-      "description": "Allow minor/patch updates only for Nest and Prisma",
-      "matchPackagePatterns": ["^@nestjs/", "^prisma$", "^@prisma/client$"],
+      "description": "Allow minor/patch updates only for NestJS packages",
+      "matchPackagePatterns": ["^@nestjs/"],
       "matchUpdateTypes": ["patch", "minor"]
     }
   ]
