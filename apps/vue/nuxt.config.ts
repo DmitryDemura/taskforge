@@ -68,6 +68,14 @@ export default defineNuxtConfig({
     define: {
       'process.env.DISABLE_OXC': 'true',
     },
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:2999',
+          changeOrigin: true,
+        },
+      },
+    },
   },
 
   // Disable oxc-parser completely
