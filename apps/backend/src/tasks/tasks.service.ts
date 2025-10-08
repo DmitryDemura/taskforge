@@ -203,11 +203,7 @@ export class TasksService {
           return false;
         }
 
-        if (dueDateFilter.lt && timestamp >= dueDateFilter.lt.getTime()) {
-          return false;
-        }
-
-        return true;
+        return !(dueDateFilter.lt && timestamp >= dueDateFilter.lt.getTime());
       });
     }
 
