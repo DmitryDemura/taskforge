@@ -4,12 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
     "dev": "nuxt dev --port 3001",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview --port 3001",
-    "postinstall": "nuxt prepare",
-    "start": "nuxt preview --port 3001"
+    "build": "nuxt build",
+    "build:static": "nuxt generate",
+    "start": "nuxt preview --port 3001",
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "nuxt": "3.19.3",

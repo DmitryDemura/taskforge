@@ -1,53 +1,50 @@
 # Scripts
 
-Utility scripts used across the repo. Prefer npm scripts in the root
-`package.json` as entrypoints.
+Utility helpers that back the npm scripts defined in the root `package.json`.
+Invoke the npm aliases whenever possible so tooling stays consistent, and fall
+back to these files only when you need custom behavior.
 
-## Available
+## Available Tools
 
-- `reinstall-deps.js` � Reinstall dependencies in root, backend, frontend
-  (`npm run deps:reinstall`). Cleans node_modules and package-lock.json before
-  install.
-- `backend-rebuild.js` � Backend rebuild helper. Use via:
-  - `npm run backend:rebuild:full` (with deps; cleans before install)
-  - `npm run backend:rebuild:fast` (without deps)
-  - `npm run backend:stop` (stop backend containers if you started them
-    manually)
-  - Note: backend rebuild no longer auto-starts containers; launch services
-    yourself when needed.
-  - Frontend/full modes are deprecated; script enforces backend-only.
-- `lint-format.mjs` � Unified `check`/`fix` runner for Prettier + ESLint.
-- `clean.js` � Cleanup Docker resources and node_modules (destructive).
+- `check-reserved.js` – Fails commits that try to add Windows reserved device
+  names (runs through Husky).
+- `clean.js` – Removes build artifacts, Docker resources, and `node_modules`.
+  Exposed via `npm run clean` / `npm run clean:git`.
+- `lint-format.mjs` – Shared ESLint + Prettier runner behind `npm run lint` /
+  `npm run lint:fix`.
+- `rebuild.js` – Multi-mode rebuild orchestrator. Called through:
+  - `npm run rebuild` (full workspace)
+  - `npm run backend:rebuild`
+  - `npm run frontend:rebuild` Backend mode intentionally **does not**
+    auto-start Docker containers; use `docker compose … up -d redis` (and
+    optionally api/frontend) when you actually need them, then
+    `npm run backend:stop` to shut them down.
+- `reinstall-deps.js` – Reinstalls dependencies across workspaces. Run directly
+  (`node scripts/reinstall-deps.js`) if you need a clean reinstall outside the
+  normal `npm install`.
 
-## Notes
+## Rebuild Script Flags
 
-- Prefer npm scripts over calling these files directly.
-- Frontend runs locally with Nuxt; avoid Dockerizing the frontend in dev.
+`rebuild.js` accepts several flags when you call it directly:
 
-## backend-rebuild flags
+- `--backend-only` – limit operations to the backend workspace
+- `--frontend-only` – limit operations to the frontend workspace
+- `--skip-cleanup` – keep existing `node_modules` and Docker artifacts
+- `--skip-deps` – skip reinstalling dependencies
+- `--skip-build` – bypass TypeScript/Docker builds
+- `--parallel-build` – enable Docker’s parallel build flag
+- `--prune` – prune Docker caches (destructive)
+- `--dry-run` – log actions without executing
 
-Most users should use the npm aliases above. Flags:
-
-- `--backend-only` � required; run in backend-only mode (enforced by script)
-- `--skip-cleanup` � do not remove node_modules/lock files or stop containers
-- `--skip-deps` � skip reinstalling backend dependencies
-- `--skip-build` � skip TypeScript/Docker build steps
-- `--parallel-build` � pass parallel flag to Docker builder where applicable
-- `--prune` � run Docker image/builder prune (destructive; frees disk space)
-- `--dry-run` � print actions without executing
-
-Examples:
+Example invocations:
 
 ```bash
-# Full rebuild with dependency reinstall (same as npm run backend:rebuild:full)
-node scripts/backend-rebuild.js --backend-only
+# Same as npm run backend:rebuild
+node scripts/rebuild.js --backend-only
 
-# Fast rebuild without deps (same as npm run backend:rebuild:fast)
-node scripts/backend-rebuild.js --backend-only --skip-deps
+# Frontend rebuild only (equivalent to npm run frontend:rebuild)
+node scripts/rebuild.js --frontend-only
 
-# Rebuild and free Docker cache
-node scripts/backend-rebuild.js --backend-only --prune
-
-# Preview what would run
-node scripts/backend-rebuild.js --backend-only --dry-run
+# Preview cleanup steps without running anything
+node scripts/rebuild.js --backend-only --dry-run
 ```

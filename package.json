@@ -13,6 +13,7 @@
     "reinstall": "node scripts/clean.js --no-docker && npm install --include-workspace-root --workspaces",
     "rebuild": "node scripts/rebuild.js",
     "frontend:rebuild": "node scripts/rebuild.js --frontend-only",
+    "frontend:dev": "npm run dev -w apps/vue",
     "backend:rebuild": "node scripts/rebuild.js --backend-only",
     "backend:dev": "npm run start:dev -w apps/backend",
     "backend:stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml stop api redis",

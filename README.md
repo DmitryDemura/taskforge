@@ -9,7 +9,7 @@
 [![Prettier](https://img.shields.io/badge/Prettier-3-F7B93E?logo=prettier&logoColor=black)](https://prettier.io/)
 [![License](https://img.shields.io/badge/License-Proprietary-orange.svg)](LICENSE)
 
-Modern full-stack task management app with a decoupled Nuxt 4 frontend and
+Modern full-stack task management app with a decoupled Nuxt 3 frontend and
 NestJS backend that caches via Redis (with a safe in-memory fallback) and stores
 tasks in-memory for quick iteration. Backend services can run against Docker
 Redis or operate fully locally; the frontend runs locally in dev.
@@ -17,7 +17,7 @@ Redis or operate fully locally; the frontend runs locally in dev.
 ## Overview
 
 - Backend: NestJS 11 (REST) + Redis-backed caching + in-memory task store
-- Frontend: Nuxt 4 + PrimeVue 4 (dev server proxies to API)
+- Frontend: Nuxt 3 + PrimeVue 3 (dev server proxies to API)
 - Infra: Docker Compose for Redis/API, Node 20 LTS
 - Quality: ESLint flat config, Prettier, Husky + lint-staged
 - Docs: Swagger UI at `/api/docs` (enabled in dev)
@@ -25,7 +25,7 @@ Redis or operate fully locally; the frontend runs locally in dev.
 ## Tech Stack
 
 - Backend: NestJS, Redis (graceful fallback to in-memory cache), RxJS
-- Frontend: Nuxt 4, Vue 3.5, PrimeVue 4, Pinia, TypeScript
+- Frontend: Nuxt 3, Vue 3.3, PrimeVue 3, Pinia, TypeScript
 - DevOps: Docker Compose, Husky, Commitlint, Renovate, EditorConfig
 
 ## Project Structure
@@ -39,7 +39,7 @@ taskforge/
 |  |  |  +- tasks/           # Tasks CRUD + caching
 |  |  |  L- redis/           # Redis module + fallback client
 |  |  L- test/               # e2e specs
-|  L- vue/                   # Nuxt 4 SPA (runs locally)
+|  L- vue/                   # Nuxt 3 SPA (runs locally)
 |     L- app/                # Nuxt app directory
 +- packages/                 # Shared configs/libraries
 +- docker-compose.yml        # Base services
@@ -117,7 +117,7 @@ Frontend `.env` (key vars):
 5. Start the Nuxt dev server in another terminal:
 
    ```bash
-   npm run dev -w apps/vue
+   npm run frontend:dev
    ```
 
    - Frontend: http://127.0.0.1:3001
@@ -140,7 +140,7 @@ Core npm scripts (see `package.json` for the complete list):
 - `npm run backend:dev` — start the Nest backend with watch mode
 - `npm run backend:rebuild` — clean & rebuild backend artifacts (no auto-start)
 - `npm run backend:stop` — stop Docker containers you started manually
-- `npm run dev -w apps/vue` — run the Nuxt frontend dev server
+- `npm run frontend:dev` — run the Nuxt frontend dev server
 - `npm run lint` / `npm run lint:fix` — shared lint/format checks
 - `npm run rebuild` — orchestrated rebuild across workspaces
 

@@ -36,8 +36,9 @@ const eslintConfig = [
       'temp/**',
 
       // Frontend specific
-      'frontend/.nuxt/**',
-      'frontend/.output/**',
+      'apps/vue/.nuxt/**',
+      'apps/vue/.output/**',
+      'apps/vue/.cache/**',
 
       // Backend specific
       'backend/src/**/__generated__/**',
@@ -104,7 +105,7 @@ const eslintConfig = [
 
   // Frontend specific configuration
   {
-    files: ['frontend/**/*.{js,mjs,cjs,ts}'],
+    files: ['apps/vue/**/*.{js,mjs,cjs,ts}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -135,14 +136,14 @@ const eslintConfig = [
 
   // Backend specific configuration
   {
-    files: ['backend/**/*.{ts,cts,mts}'],
+    files: ['apps/backend/**/*.{ts,cts,mts}'],
     plugins: {
       '@typescript-eslint': tseslint.plugin,
     },
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        project: ['backend/tsconfig.json', 'backend/tsconfig.build.json'],
+        project: ['apps/backend/tsconfig.json', 'apps/backend/tsconfig.build.json'],
         tsconfigRootDir,
         sourceType: 'module',
       },
@@ -212,8 +213,8 @@ export const FILE_PATTERNS = {
   js: '**/*.{js,mjs,cjs}',
   ts: '**/*.{ts,cts,mts,tsx}',
   vue: '**/*.vue',
-  frontend: 'frontend/**/*.{js,ts,vue}',
-  backend: 'backend/**/*.{ts,cts,mts}',
+  frontend: 'apps/vue/**/*.{js,ts,vue}',
+  backend: 'apps/backend/**/*.{ts,cts,mts}',
   scripts: 'scripts/**/*.{js,mjs,cjs}',
   config: '*.{js,mjs,cjs,ts,json}',
   docs: '**/*.md',

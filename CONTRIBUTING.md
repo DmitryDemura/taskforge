@@ -20,7 +20,7 @@ npm run backend:dev
 In a second terminal:
 
 ```bash
-npm run dev -w apps/vue
+npm run frontend:dev
 ```
 
 - API: http://localhost:2999 (health: `/api/health`, docs: `/api/docs`)

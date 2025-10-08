@@ -184,7 +184,7 @@ export class RedisService implements OnModuleInit {
       return client as unknown as RedisClient;
     } catch (error) {
       client.removeListener('error', silentHandler);
-      await client.disconnect();
+      client.disconnect();
       this.logger.warn(
         `Failed to connect to Redis via URL ${redisUrl}: ${
           error instanceof Error ? error.message : 'unknown error'
@@ -220,7 +220,7 @@ export class RedisService implements OnModuleInit {
         return candidate as unknown as RedisClient;
       } catch (error) {
         candidate.removeListener('error', silentHandler);
-        await candidate.disconnect();
+        candidate.disconnect();
         this.logger.warn(
           `Failed to connect to Redis at ${host}:${port} - ${
             error instanceof Error ? error.message : 'unknown error'
