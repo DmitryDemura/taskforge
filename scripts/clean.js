@@ -1,75 +1,211 @@
 #!/usr/bin/env node
-const { execSync } = require('child_process');
+
 const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
 
-const colors = {
-  reset: '\x1b[0m',
-  bright: '\x1b[1m',
+// ===== Console colors =====
+const C = {
+  r: '\x1b[0m',
+  b: '\x1b[1m',
   red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  cyan: '\x1b[36m',
+  grn: '\x1b[32m',
+  yel: '\x1b[33m',
+  cya: '\x1b[36m',
 };
+const log = (msg, color = C.r) => console.log(color + msg + C.r);
 
-function log(message, color = colors.reset) {
-  console.log(`${color}${message}${colors.reset}`);
-}
+// ===== Flags =====
+// --keep-lock      -> do not delete package-lock.json
+// --no-docker      -> skip Docker cleanup
+// --git            -> use `git clean -xfd` instead of walking the filesystem (fast but aggressive)
+// --dry            -> only show what would be deleted
+const argv = process.argv.slice(2);
+const KEEP_LOCK = argv.includes('--keep-lock');
+const NO_DOCKER = argv.includes('--no-docker');
+const USE_GIT = argv.includes('--git');
+const DRY = argv.includes('--dry');
 
-function removeIfExists(filePath) {
-  if (fs.existsSync(filePath)) {
-    if (fs.lstatSync(filePath).isDirectory()) {
-      fs.rmSync(filePath, { recursive: true, force: true });
-      log(`✅ Removed directory: ${filePath}`, colors.green);
+// What we delete
+const DIRS = new Set([
+  'node_modules',
+  'dist',
+  '.nuxt',
+  '.output',
+  '.turbo',
+  '.angular',
+  '.next',
+  '.vite',
+  'coverage',
+  'build',
+  '.cache',
+]);
+const FILES = new Set(['package-lock.json']);
+
+// Where we walk (repo root plus common monorepo folders)
+const ROOT = process.cwd();
+const ENTRY_DIRS = [
+  ROOT,
+  path.join(ROOT, 'backend'),
+  path.join(ROOT, 'frontend'),
+  path.join(ROOT, 'apps'),
+  path.join(ROOT, 'packages'),
+];
+
+// Directories to skip during traversal
+const SKIP_DIRS = new Set(['.git', '.husky', '.idea', '.vscode']);
+
+// Reliable removal with retries for Windows
+function rmSafe(p, isDir) {
+  if (DRY) {
+    log(`[dry] remove ${isDir ? 'dir ' : 'file'}: ${p}`, C.cya);
+
+    return;
+  }
+
+  try {
+    if (isDir) {
+      fs.rmSync(p, { recursive: true, force: true, maxRetries: 10, retryDelay: 120 });
     } else {
-      fs.unlinkSync(filePath);
-      log(`✅ Removed file: ${filePath}`, colors.green);
+      fs.rmSync(p, { force: true, maxRetries: 5, retryDelay: 80 });
     }
-  } else {
-    log(`⏭️  Not found: ${filePath}`, colors.yellow);
+
+    log(`✓ removed ${isDir ? 'dir ' : 'file'}: ${p}`, C.grn);
+  } catch (e) {
+    log(`! skip ${p} (${e.code || e.message})`, C.yel);
   }
 }
 
-log('🧹 TaskForge Cleanup Started', colors.bright);
+function walkAndCollect(startDir, out = []) {
+  let entries;
+  try {
+    entries = fs.readdirSync(startDir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
 
-log('\n📦 Cleaning node_modules...', colors.cyan);
+  for (const e of entries) {
+    const full = path.join(startDir, e.name);
 
-const nodeModulesPaths = ['node_modules', 'backend/node_modules', 'frontend/node_modules'];
+    if (e.isDirectory()) {
+      if (SKIP_DIRS.has(e.name)) {
+        continue;
+      }
 
-nodeModulesPaths.forEach(removeIfExists);
+      if (DIRS.has(e.name)) {
+        // Found target directory - add it and do not descend into it
+        out.push({ path: full, isDir: true });
+        continue;
+      }
 
-log('\n🔒 Cleaning package-lock files...', colors.cyan);
+      // Continue recursion
+      walkAndCollect(full, out);
+    } else if (FILES.has(e.name) && !KEEP_LOCK) {
+      out.push({ path: full, isDir: false });
+    }
+  }
 
-const lockFiles = ['package-lock.json', 'backend/package-lock.json', 'frontend/package-lock.json'];
-
-lockFiles.forEach(removeIfExists);
-
-log('\n🐳 Cleaning Docker resources...', colors.cyan);
-
-try {
-  execSync(
-    'docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v --remove-orphans',
-    { stdio: 'inherit' },
-  );
-  log('✅ Docker containers and volumes removed', colors.green);
-} catch (_error) {
-  log('⚠️  Docker cleanup failed (containers might not be running)', colors.yellow);
+  return out;
 }
 
-try {
-  execSync('docker image rm taskforge-api taskforge-frontend', { stdio: 'pipe' });
-  log('✅ TaskForge Docker images removed', colors.green);
-} catch (_error) {
-  log('⚠️  Some Docker images might not exist', colors.yellow);
+function cleanViaGit() {
+  const excludes = [
+    // Keep local config files if present
+    '!.env',
+    '!.env.local',
+    '!/.vscode/',
+  ];
+  const cmd = `git clean -xfd ${excludes.map((e) => `-e "${e}"`).join(' ')}`;
+
+  if (DRY) {
+    log(`[dry] would run: ${cmd}`, C.cya);
+
+    return;
+  }
+
+  try {
+    execSync(cmd, { stdio: 'inherit' });
+  } catch {
+    // ignore
+  }
 }
 
-try {
-  execSync('docker builder prune -f', { stdio: 'pipe' });
-  log('✅ Docker build cache cleared', colors.green);
-} catch (_error) {
-  log('⚠️  Docker build cache cleanup failed', colors.yellow);
+function cleanDocker() {
+  const down =
+    'docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v --remove-orphans';
+  const pruneImg = 'docker image prune -f';
+  const pruneBld = 'docker builder prune -f';
+
+  for (const cmd of [down, pruneImg, pruneBld]) {
+    if (DRY) {
+      log(`[dry] would run: ${cmd}`, C.cya);
+      continue;
+    }
+
+    try {
+      execSync(cmd, { stdio: 'pipe' });
+      log(`✓ docker: ${cmd}`, C.grn);
+    } catch {
+      log(`! docker failed (ok) → ${cmd}`, C.yel);
+    }
+  }
 }
 
-log('\n🎉 Cleanup completed!', colors.green);
-log('\n📋 Next steps:', colors.bright);
-log('  • Full rebuild: npm run rebuild');
-log('  • Or manual: npm install && docker compose up --build');
+function main() {
+  log('🧹 TaskForge Clean', C.b);
+
+  if (USE_GIT) {
+    log('mode: git clean -xfd', C.cya);
+    cleanViaGit();
+  } else {
+    log('mode: filesystem walk', C.cya);
+
+    const targets = [];
+    for (const base of ENTRY_DIRS) {
+      if (!fs.existsSync(base)) {
+        continue;
+      }
+
+      // If base is apps/ or packages/, iterate through their subdirectories
+      const baseName = path.basename(base);
+
+      if (['apps', 'packages'].includes(baseName)) {
+        let items = [];
+
+        try {
+          items = fs.readdirSync(base, { withFileTypes: true });
+        } catch {
+          //
+        }
+
+        for (const it of items) {
+          if (it.isDirectory()) {
+            walkAndCollect(path.join(base, it.name), targets);
+          }
+        }
+      } else {
+        walkAndCollect(base, targets);
+      }
+    }
+
+    // Remove deepest paths first to avoid conflicts
+    targets
+      .sort((a, b) => b.path.split(path.sep).length - a.path.split(path.sep).length)
+      .forEach((t) => rmSafe(t.path, t.isDir));
+  }
+
+  if (!NO_DOCKER) {
+    log('\n🐳 Docker cleanup', C.b);
+    cleanDocker();
+  } else {
+    log('\n🐳 Docker cleanup: skipped by --no-docker', C.yel);
+  }
+
+  log('\n🎉 Done!', C.grn);
+  log('\nTips:', C.b);
+  log('  • npm run reinstall    # full dependency reinstall', C.cya);
+  log('  • node scripts/clean.js --git --no-docker', C.cya);
+  log('  • node scripts/clean.js --keep-lock', C.cya);
+}
+
+main();

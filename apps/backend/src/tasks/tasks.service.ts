@@ -31,9 +31,7 @@ export class TasksService {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
   }
 
-  private buildDueDateFilter(
-    input: string,
-  ): Prisma.DateTimeNullableFilter | undefined {
+  private buildDueDateFilter(input: string): Prisma.DateTimeNullableFilter | undefined {
     if (!input?.trim()) {
       return undefined;
     }
@@ -45,9 +43,7 @@ export class TasksService {
 
       if (!isNaN(from.getTime())) {
         const gte = this.startOfDay(from);
-        const lt = !isNaN(to.getTime())
-          ? this.addDays(this.startOfDay(to), 1)
-          : undefined;
+        const lt = !isNaN(to.getTime()) ? this.addDays(this.startOfDay(to), 1) : undefined;
 
         return lt ? { gte, lt } : { gte };
       }
@@ -67,17 +63,8 @@ export class TasksService {
     return { gte, lt };
   }
 
-  private normalizeSortField(
-    sortField?: string,
-  ): keyof Prisma.TaskOrderByWithRelationInput {
-    const allowed = [
-      'id',
-      'title',
-      'status',
-      'dueDate',
-      'createdAt',
-      'updatedAt',
-    ] as const;
+  private normalizeSortField(sortField?: string): keyof Prisma.TaskOrderByWithRelationInput {
+    const allowed = ['id', 'title', 'status', 'dueDate', 'createdAt', 'updatedAt'] as const;
 
     type SortField = (typeof allowed)[number];
 
@@ -101,14 +88,7 @@ export class TasksService {
   }
 
   async findAll(query: QueryTaskDto): Promise<PaginatedTasks> {
-    const {
-      status,
-      sort = 'asc',
-      search,
-      title,
-      dueDate,
-      sortField = 'dueDate',
-    } = query;
+    const { status, sort = 'asc', search, title, dueDate, sortField = 'dueDate' } = query;
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const skip = query.skip ?? (page - 1) * limit;
@@ -126,9 +106,7 @@ export class TasksService {
       where.status = status as TaskStatus;
     }
 
-    const dueDateFilter = dueDate
-      ? this.buildDueDateFilter(dueDate)
-      : undefined;
+    const dueDateFilter = dueDate ? this.buildDueDateFilter(dueDate) : undefined;
 
     if (dueDateFilter) {
       where.dueDate = dueDateFilter;

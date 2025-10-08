@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 
 const colors = {
@@ -15,9 +15,37 @@ function log(msg, color = colors.reset) {
   console.log(`${color}${msg}${colors.reset}`);
 }
 
-function exec(cmd, cwd) {
-  log(`Running: ${cmd}${cwd ? ` (cwd=${cwd})` : ''}`, colors.cyan);
-  execSync(cmd, { stdio: 'inherit', cwd: cwd || process.cwd() });
+function runNpm(args, cwd) {
+  const display = `npm ${args.join(' ')}`;
+  log(`Running: ${display}${cwd ? ` (cwd=${cwd})` : ''}`, colors.cyan);
+
+  const npmCli =
+    process.env.npm_execpath ||
+    (() => {
+      try {
+        // Fallback when script is invoked outside npm run; keeps execution shell-free
+        return require.resolve('npm/bin/npm-cli.js');
+      } catch (_err) {
+        return null;
+      }
+    })();
+
+  if (!npmCli) {
+    throw new Error('Unable to locate npm CLI (npm_execpath not set)');
+  }
+
+  const result = spawnSync(process.execPath, [npmCli, ...args], {
+    stdio: 'inherit',
+    cwd: cwd || process.cwd(),
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0) {
+    throw new Error(`Command failed: ${display}`);
+  }
 }
 
 function removePath(p) {
@@ -62,23 +90,26 @@ function installDeps(dir) {
     removePath(lockPath);
   }
 
-  const cmd = hadLock ? 'npm ci' : 'npm install';
+  const args = hadLock ? ['ci'] : ['install'];
   const prefix = dir ? `${dir}: ` : '';
-  log(`${prefix}Installing with ${cmd} (lockfile ${hadLock ? 'present' : 'absent'})`, colors.cyan);
-  exec(cmd, dir);
+  log(
+    `${prefix}Installing with npm ${args[0]} (lockfile ${hadLock ? 'present' : 'absent'})`,
+    colors.cyan,
+  );
+  runNpm(args, dir);
 }
 
 function main() {
-  log('Reinstalling dependencies (root, backend, frontend)', colors.bright);
+  log('Reinstalling dependencies (root, apps/backend, apps/vue)', colors.bright);
 
   // Root
   installDeps();
 
   // Backend
-  installDeps('backend');
+  installDeps('apps/backend');
 
   // Frontend
-  installDeps('frontend');
+  installDeps('apps/vue');
 
   log('Dependencies reinstalled successfully', colors.green);
 }

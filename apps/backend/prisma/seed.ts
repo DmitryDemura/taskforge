@@ -8,7 +8,7 @@ async function main() {
   const count = await prisma.task.count();
 
   if (count > 0) {
-    console.log(`Seed skipped: ${count} tasks already exist.`);
+    console.info(`Seed skipped: ${count} tasks already exist.`);
 
     return;
   }
@@ -36,7 +36,7 @@ async function main() {
     ],
   });
 
-  console.log('Seed completed: created demo tasks.');
+  console.info('Seed completed: created demo tasks.');
 }
 
 main()

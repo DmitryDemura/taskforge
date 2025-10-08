@@ -79,7 +79,8 @@ const eslintConfig = [
       // Code style
       curly: ['error', 'all'],
       'brace-style': ['error', '1tbs', { allowSingleLine: false }],
-      'no-console': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error', 'info', 'time', 'timeEnd'] }],
+      'prettier/prettier': 'warn',
       'no-unused-vars': 'off', // Use TypeScript version instead
       '@typescript-eslint/no-unused-vars': [
         'warn',

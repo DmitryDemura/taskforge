@@ -23,11 +23,5 @@
     "types": ["node", "jest"]
   },
   "include": ["src", "test"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "generated",
-    "generated/**",
-    "prisma/migrations"
-  ]
+  "exclude": ["node_modules", "dist", "generated", "generated/**", "prisma/migrations"]
 }

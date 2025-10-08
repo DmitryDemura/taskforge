@@ -39,7 +39,7 @@ const onlyFrontend = args.includes('--frontend-only');
 const onlyBackend = args.includes('--backend-only');
 const dryRun = args.includes('--dry-run');
 const parallelBuild = args.includes('--parallel-build');
-const doPrune = args.includes('--prune'); // ВАЖНО: глобальные prune теперь запускаются только по этому флагу
+const doPrune = args.includes('--prune'); // IMPORTANT: global prune now runs only when this flag is provided
 
 if (onlyFrontend && onlyBackend) {
   log('❌ Use either --frontend-only or --backend-only, not both.', colors.red);
@@ -207,7 +207,7 @@ async function main() {
       } else {
         removeIfExists('backend/node_modules');
         removeIfExists('frontend/node_modules');
-        removeIfExists('node_modules'); // root — только в full
+        removeIfExists('node_modules'); // root - only in full mode
       }
     });
   }
@@ -222,7 +222,7 @@ async function main() {
       } else {
         removeIfExists('backend/package-lock.json');
         removeIfExists('frontend/package-lock.json');
-        removeIfExists('package-lock.json'); // root — только в full
+        removeIfExists('package-lock.json'); // root - only in full mode
       }
     });
   }
@@ -251,7 +251,7 @@ async function main() {
         log('No project images selected for removal in this mode', colors.yellow);
       }
 
-      // Глобальные prune только в FULL-режиме и только по флагу --prune
+      // Global prune runs only in FULL mode and only when --prune is passed
       if (!onlyFrontend && !onlyBackend && doPrune) {
         const pruneImagesCmd = 'docker image prune -f';
         exec(pruneImagesCmd, { stdio: 'pipe' });
